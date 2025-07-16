@@ -19,14 +19,14 @@ from langchain.chains import RetrievalQA
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 db_config = {
     "host": "localhost",
     "user": "root",
-    "password": "12Athmikha@",
-    "database": "caterpillar1"
+    "password": "aldina123",
+    "database": "cat"
 }
 
 GOOGLE_API_KEY = "AIzaSyBDidg9orPvjjQfMz6n1tNx8RWgLjEipeQ"
@@ -265,6 +265,7 @@ def get_all_files():
         }), 200
 
     except Exception as e:
+        print("Error in /files:", e)
         return jsonify({"error": str(e)}), 500
 
     finally:

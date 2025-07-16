@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; //
+import { useNavigate } from 'react-router-dom';
 import { registerUser, loginUser } from '../services/authService';
 import '../styles/AuthForm.css';
 
@@ -8,11 +8,10 @@ export default function AuthForm() {
   const [form, setForm] = useState({
     username: '',
     email: '',
-    password: '',
-    role: 'user'
+    password: ''
   });
 
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   const toggleForm = () => setIsLogin(prev => !prev);
 
@@ -35,8 +34,7 @@ export default function AuthForm() {
         const signupPayload = {
           username: form.username,
           email: form.email,
-          password: form.password,
-          role: form.role
+          password: form.password
         };
         const res = await registerUser(signupPayload);
         alert('Signup success! Please login.');
@@ -79,12 +77,6 @@ export default function AuthForm() {
             onChange={handleChange}
             required
           />
-          {!isLogin && (
-            <select name="role" value={form.role} onChange={handleChange} required>
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          )}
           <button type="submit">{isLogin ? 'Login' : 'Sign Up'}</button>
         </form>
 

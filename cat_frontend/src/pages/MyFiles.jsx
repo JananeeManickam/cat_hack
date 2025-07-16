@@ -13,16 +13,17 @@ export default function MyFiles() {
   }, []);
 
   const fetchFiles = async () => {
-    try {
-      const res = await fetch('http://localhost:5000/upload/');
-      const data = await res.json();
-      setFiles(data.files);
-    } catch (err) {
-      console.error('Error fetching files:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const res = await fetch('http://localhost:5000/files');
+    const data = await res.json();
+    setFiles(data.files || []);
+  } catch (err) {
+    console.error('Error fetching files:', err);
+    setFiles([]); // Make sure files is always an array
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <DashboardLayout>

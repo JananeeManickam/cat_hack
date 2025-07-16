@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import '../styles/EditFile.css'; 
+import '../styles/EditFile.css';
 
 export default function EditFilePage() {
   const { fileId } = useParams();
@@ -10,11 +10,11 @@ export default function EditFilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/upload/${fileId}/`)
+    fetch(`http://localhost:5000/get-file-content/${fileId}`)
       .then(res => res.json())
       .then(data => {
         setFileData(data);
-        setContent(data.full_content);
+        setContent(data.content);
         setLoading(false);
       })
       .catch(err => {
@@ -24,32 +24,27 @@ export default function EditFilePage() {
   }, [fileId]);
 
   const handleSave = async () => {
-  try {
-    const response = await fetch(`http://localhost:8000/upload/${fileId}/`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control' : 'no-cache'
-      },
-      body: JSON.stringify({ content }),
-    });
+    try {
+      const response = await fetch('http://localhost:5000/edit-file-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ file_id: fileId, content }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to save the file');
+      if (!response.ok) {
+        throw new Error('Failed to save the file');
+      }
+
+      const result = await response.json();
+      alert('File updated successfully!');
+      navigate('/my_files');
+    } catch (err) {
+      console.error('Error updating file:', err);
+      alert('Failed to save file.');
     }
-
-    const result = await response.json();
-    alert('File updated successfully!');
-
-    // ✅ Redirect to MyFiles page
-    navigate('/my_files');
-  } catch (err) {
-    console.error('Error updating file:', err);
-    alert('Failed to save file.');
-  }
-};
-
-
+  };
 
   if (loading) return <p>Loading...</p>;
 
@@ -57,12 +52,12 @@ export default function EditFilePage() {
     <div className="editfile-container">
       <h2>Edit: {fileData?.filename}</h2>
       <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={20}
-            cols={80}
-            className="edit-textarea"
-            />
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        rows={20}
+        cols={80}
+        className="edit-textarea"
+      />
       <div className="button-group">
         <button className="save-button" onClick={handleSave}>Save</button>
         <button className="save-button" onClick={() => navigate('/my_files')}>Cancel</button>
