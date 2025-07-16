@@ -246,6 +246,32 @@ def web_search():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/files', methods=['GET'])
+def get_all_files():
+    conn = None
+    cursor = None
+
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, filename FROM files")
+        results = cursor.fetchall()
+
+        files = [{"id": row[0], "filename": row[1]} for row in results]
+
+        return jsonify({
+            "count": len(files),
+            "files": files
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
