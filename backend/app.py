@@ -1,4 +1,4 @@
-from utils import aiprocess, generate_brief_from_file, edit_pdf
+from utils import aiprocess, generate_brief_from_file, edit_pdf, search_google
 import os
 from flask import Flask, request, jsonify, send_file
 import pymysql
@@ -201,6 +201,48 @@ def get_file_content(file_id):
             cursor.close()
         if conn:
             conn.close()
+@app.route('/websearch', methods=['POST'])
+def web_search():
+    data = request.json
+    query = data.get("query")
+
+    if not query:
+        return jsonify({"error": "Query is required"}), 400
+
+    try:
+        # Step 1: Get search result links using utils function
+        links = search_google(query)
+
+        # Step 2: Scrape content from each link
+        snippets = []
+        headers = {"User-Agent": "Mozilla/5.0"}
+
+        for url in links[:5]:  # Limit to top 5 for performance
+            try:
+                response = requests.get(url, headers=headers, timeout=10)
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                # Extract visible paragraph texts
+                text = " ".join(p.text.strip() for p in soup.find_all("p") if p.text.strip())
+                snippet = text[:1000] + "..." if len(text) > 1000 else text
+
+                snippets.append({
+                    "url": url,
+                    "snippet": snippet
+                })
+            except Exception as e:
+                snippets.append({
+                    "url": url,
+                    "snippet": f"Failed to fetch content: {str(e)}"
+                })
+
+        return jsonify({
+            "query": query,
+            "results": snippets
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
