@@ -5,7 +5,7 @@ import pymysql
 import io
 import os
 from docx import Document
-import fitz  # PyMuPDF
+import fitz  
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
@@ -17,71 +17,92 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from flask_cors import CORS
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.units import inch
-import textwrap
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 CORS(app)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 db_config = {
-    "host": "localhost",
+    "host": "127.0.0.1",
     "user": "root",
-    "password": "aldina123",
-    "database": "cat"
+    "password": "Janu&mysql1603",
+    "database": "caterpillar"
 }
 
 GOOGLE_API_KEY = "AIzaSyBDidg9orPvjjQfMz6n1tNx8RWgLjEipeQ"
 SERP_API_KEY = "dad8d20aacff98df37793a921fe61fad4ddadfc0d2714150c739529c8b0e3c2c"
 
-def create_pdf_from_text(text, filename):
-    """Create a PDF from text content"""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
-    
-    # Split text into paragraphs
-    paragraphs = text.split('\n')
-    
-    for para in paragraphs:
-        if para.strip():  # Skip empty lines
-            # Wrap long lines
-            wrapped_lines = textwrap.fill(para, width=80)
-            p = Paragraph(wrapped_lines, styles['Normal'])
-            story.append(p)
-            story.append(Spacer(1, 12))
-    
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
 
-def create_docx_from_text(text, filename):
-    """Create a DOCX from text content"""
-    buffer = io.BytesIO()
-    doc = Document()
-    
-    # Split text into paragraphs
-    paragraphs = text.split('\n')
-    
-    for para in paragraphs:
-        if para.strip():  # Skip empty lines
-            doc.add_paragraph(para)
-    
-    doc.save(buffer)
-    buffer.seek(0)
-    return buffer
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
 
-def create_txt_from_text(text, filename):
-    """Create a TXT from text content"""
-    buffer = io.BytesIO()
-    buffer.write(text.encode('utf-8'))
-    buffer.seek(0)
-    return buffer
+    if not username or not email or not password:
+        return jsonify({"error": "All fields required"}), 400
+
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Check if user already exists
+        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+        if cursor.fetchone():
+            return jsonify({"error": "Email already registered"}), 409
+
+        hashed_password = generate_password_hash(password)
+        cursor.execute(
+            "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+            (username, email, hashed_password)
+        )
+        conn.commit()
+        return jsonify({"message": "User created successfully"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, password, username FROM users WHERE email = %s", (email,))
+        result = cursor.fetchone()
+
+        if result:
+            user_id, hashed_password, username = result
+            if check_password_hash(hashed_password, password):
+                return jsonify({"message": "Login successful", "user_id": user_id, "username": username}), 200
+            else:
+                return jsonify({"error": "Invalid password"}), 401
+        else:
+            return jsonify({"error": "User not found"}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
