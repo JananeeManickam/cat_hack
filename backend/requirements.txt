@@ -1,0 +1,10 @@
+Flask
+PyPDF2
+python-docx
+langchain
+langchain-google-genai
+google-generativeai
+bs4
+requests
+chromadb
+serpapi
