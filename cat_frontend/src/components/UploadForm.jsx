@@ -38,7 +38,7 @@ export default function UploadForm() {
 
       xhr.onload = () => {
         setUploading(false);
-        if (xhr.status === 201) {
+        if (xhr.status === 200) {
           alert('Files uploaded successfully!');
           setFiles([]);
           setProgress(0);
