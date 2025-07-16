@@ -1,0 +1,61 @@
+.myfiles-container {
+  padding: 20px;
+  color: white;
+  background-color: #1c1c1c;
+  min-height: 100vh;
+}
+
+h2 {
+  color: #ffcc00;
+  margin-bottom: 1rem;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.file-card {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  padding: 1rem;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  transition: transform 0.2s ease;
+}
+
+.file-card:hover {
+  transform: scale(1.01);
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-preview {
+  color: #ccc;
+  margin-top: 0.5rem;
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+}
+
+.edit-button {
+  background-color: #ffcc00;
+  color: #000;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.edit-button:hover {
+  background-color: #e6b800;
+}

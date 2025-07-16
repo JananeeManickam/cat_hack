@@ -1,0 +1,62 @@
+.sidebar {
+  width: 100px;
+  background-color: #000;
+  color: #FFCD00;
+  padding: 2rem 1rem;
+  height: 100vh;
+  position: relative;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* ensures bottom logout */
+}
+
+
+.sidebar.collapsed {
+  width: 20px;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 20px;
+  right: 13px;
+  color: #FFCD00;
+  border-radius: 50%;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  z-index: 10;
+  transition: transform 0.2s ease;
+}
+
+.sidebar li.toggle-button {
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+.sidebar-toggle:hover {
+  transform: scale(1.1);
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+.nav-links li,
+.logout-link li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 1.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.nav-links li:hover,
+.logout-link li:hover {
+  color: white;
+}

@@ -1,0 +1,43 @@
+/* EditFile.css */
+.editfile-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #222;
+}
+
+.edit-textarea {
+  width: 100%;
+  max-width: 800px;
+  min-height: 400px;
+  padding: 10px;
+  font-size: 1rem;
+  background: #1e1e1e;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 5px;
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+.button-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.save-button {
+  padding: 10px 20px;
+  background-color: #ffd100;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 4px;
+}
+
+.save-button:hover {
+  background-color: #e6be00;
+}

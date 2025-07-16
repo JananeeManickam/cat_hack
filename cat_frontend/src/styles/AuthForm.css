@@ -1,0 +1,114 @@
+.auth-container {
+  width: 350px;
+  padding: 40px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  font-family: 'Segoe UI', sans-serif;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  animation: fadeIn 0.6s ease forwards;
+  position: relative;
+
+}
+
+/* Slide from top */
+.auth-container.login {
+  transform: translateY(10px);
+  border-top: 5px solid #FFCD00;
+}
+
+.auth-container.signup {
+  transform: translateY(0px);
+  border-top: 5px solid #5C5C5C;
+}
+
+
+
+.auth-container h2 {
+  color: black;
+  margin-bottom: 24px;
+  font-size: 1.8rem;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: border 0.2s ease;
+}
+.auth-form select{
+  width: 107%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: border 0.2s ease;
+}
+
+
+.auth-form input:focus,
+.auth-form select:focus {
+  border-color: #FFCD00; /* Caterpillar yellow */
+  outline: none;
+}
+
+
+.auth-form button {
+  width: 95%;
+  padding: 12px;
+  background-color: #FFCD00;
+  color: black;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-top: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+.auth-form button:hover {
+  background-color: #e0b800;
+}
+
+.toggle {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: #5C5C5C;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.toggle:hover {
+  color: #000;
+  transform: scale(1.05);
+  text-decoration: underline;
+}
+
+.auth-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #1f1f1f;
+}
+
+.auth-header {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #FFCD00;
+    margin-bottom: 40px;
+    text-align: center;
+    animation: popIn 5.5s ease;
+
+}
