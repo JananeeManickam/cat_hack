@@ -154,24 +154,16 @@ def ask():
     answer = aiprocess(file_paths, question)
     return jsonify({"answer": answer})
 
-@app.route('/edit-file', methods=['POST'])
-def edit_file():
+@app.route('/edit-file/<int:file_id>', methods=['POST'])
+def edit_file(file_id):
     data = request.json
-    file_id = data.get("file_id")
     filename = data.get("filename")
     contents = data.get("contents")
 
-    if not file_id:
-        return jsonify({"error": "Missing file_id"}), 400
     if not filename:
         return jsonify({"error": "Missing filename"}), 400
     if not contents:
         return jsonify({"error": "Missing contents"}), 400
-
-    try:
-        file_id = int(file_id)
-    except ValueError:
-        return jsonify({"error": "Invalid file_id"}), 400
 
     # Initialize variables for cleanup
     conn = None
@@ -229,24 +221,16 @@ def edit_file():
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
-@app.route('/edit-file-download', methods=['POST'])
-def edit_file_download():
+@app.route('/edit-file-download/<int:file_id>', methods=['POST'])
+def edit_file_download(file_id):
     data = request.json
-    file_id = data.get("file_id")
     filename = data.get("filename")
     contents = data.get("contents")
 
-    if not file_id:
-        return jsonify({"error": "Missing file_id"}), 400
     if not filename:
         return jsonify({"error": "Missing filename"}), 400
     if not contents:
         return jsonify({"error": "Missing contents"}), 400
-
-    try:
-        file_id = int(file_id)
-    except ValueError:
-        return jsonify({"error": "Invalid file_id"}), 400
 
     # Initialize variables for cleanup
     conn = None
