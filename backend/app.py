@@ -1,23 +1,87 @@
-from flask import Flask, request, jsonify, send_file
 from utils import aiprocess, generate_brief_from_file, edit_pdf
 import os
+from flask import Flask, request, jsonify, send_file
+import pymysql
+import io
+import os
+from docx import Document
+import fitz  # PyMuPDF
+import PyPDF2
+import requests
+from bs4 import BeautifulSoup
+from serpapi import GoogleSearch
+import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain import PromptTemplate
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import Chroma
+from langchain.chains import RetrievalQA
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+db_config = {
+    "host": "localhost",
+    "user": "root",
+    "password": "12Athmikha@",
+    "database": "caterpillar1"
+}
+
+GOOGLE_API_KEY = "AIzaSyBDidg9orPvjjQfMz6n1tNx8RWgLjEipeQ"
+SERP_API_KEY = "dad8d20aacff98df37793a921fe61fad4ddadfc0d2714150c739529c8b0e3c2c"
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
     files = request.files.getlist('files')
+    if not files:
+        return jsonify({"error": "No files uploaded"}), 400
+
     paths = []
+    uploaded_db_info = []
+    conn = None
+    cursor = None
 
-    for file in files:
-        filename = file.filename
-        path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(path)
-        paths.append(path)
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
 
-    return jsonify({"message": "Files uploaded", "paths": paths})
+        for file in files:
+            if file and file.filename:
+                filename = file.filename
+
+                # 1. Save to disk
+                path = os.path.join(UPLOAD_FOLDER, filename)
+                file.seek(0)
+                file.save(path)
+                paths.append(path)
+
+                # 2. Save to database
+                file.seek(0)
+                content = file.read()
+                insert_query = "INSERT INTO files (filename, content) VALUES (%s, %s)"
+                cursor.execute(insert_query, (filename, content))
+                conn.commit()
+                file_id = cursor.lastrowid
+
+                uploaded_db_info.append({
+                    "filename": filename,
+                    "file_id": file_id
+                })
+
+        return jsonify({
+            "message": f"{len(paths)} files uploaded",
+            "paths": paths,
+            "db_records": uploaded_db_info
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/brief', methods=['POST'])
 def brief():
@@ -39,12 +103,105 @@ def ask():
 
 @app.route('/edit-pdf', methods=['POST'])
 def edit():
+    file_id = request.form.get("file_id")
     file = request.files.get("file")
-    if not file:
-        return {"error": "No file provided"}, 400
 
+    if not file_id:
+        return jsonify({"error": "Missing file_id"}), 400
+    if not file:
+        return jsonify({"error": "No file provided"}), 400
+
+    try:
+        file_id = int(file_id)
+    except ValueError:
+        return jsonify({"error": "Invalid file_id"}), 400
+
+    
     modified_pdf = edit_pdf(file)
+
+    
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+        modified_pdf.seek(0)
+        content = modified_pdf.read()
+        update_query = "UPDATE files SET filename = %s, content = %s WHERE id = %s"
+        new_filename = f"edited_{file.filename}"
+        cursor.execute(update_query, (new_filename, content, file_id))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify({"error": "No file found with given file_id"}), 404
+
+    except Exception as e:
+        return jsonify({"error": "Failed to update DB", "db_error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    modified_pdf.seek(0)
     return send_file(modified_pdf, download_name="modified.pdf", as_attachment=True)
+
+
+@app.route('/get-file-content/<int:file_id>', methods=['GET'])
+def get_file_content(file_id):
+    conn = None
+    cursor = None
+
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute("SELECT filename, content FROM files WHERE id = %s", (file_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify({"error": "File not found"}), 404
+
+        filename, content = result
+        ext = os.path.splitext(filename)[1].lower()
+        temp_path = f"temp_{file_id}{ext}"
+
+        
+        with open(temp_path, "wb") as f:
+            f.write(content)
+
+        
+        if ext == ".pdf":
+            doc = fitz.open(temp_path)
+            text = "".join(page.get_text() for page in doc)
+            doc.close()
+
+        elif ext == ".docx":
+            doc = Document(temp_path)
+            text = "\n".join(para.text for para in doc.paragraphs)
+
+        elif ext == ".txt":
+            with open(temp_path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+
+        else:
+            os.remove(temp_path)
+            return jsonify({"filename": filename, "message": f"Unsupported file type: {ext}"}), 415
+
+        os.remove(temp_path)
+
+        return jsonify({
+            "file_id": file_id,
+            "filename": filename,
+            "content": text
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 if __name__ == '__main__':
     app.run(debug=True)
