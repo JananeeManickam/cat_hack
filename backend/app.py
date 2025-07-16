@@ -17,6 +17,12 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from flask_cors import CORS
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.units import inch
+import textwrap
 
 app = Flask(__name__)
 CORS(app)
@@ -31,6 +37,51 @@ db_config = {
 
 GOOGLE_API_KEY = "AIzaSyBDidg9orPvjjQfMz6n1tNx8RWgLjEipeQ"
 SERP_API_KEY = "dad8d20aacff98df37793a921fe61fad4ddadfc0d2714150c739529c8b0e3c2c"
+
+def create_pdf_from_text(text, filename):
+    """Create a PDF from text content"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Split text into paragraphs
+    paragraphs = text.split('\n')
+    
+    for para in paragraphs:
+        if para.strip():  # Skip empty lines
+            # Wrap long lines
+            wrapped_lines = textwrap.fill(para, width=80)
+            p = Paragraph(wrapped_lines, styles['Normal'])
+            story.append(p)
+            story.append(Spacer(1, 12))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+def create_docx_from_text(text, filename):
+    """Create a DOCX from text content"""
+    buffer = io.BytesIO()
+    doc = Document()
+    
+    # Split text into paragraphs
+    paragraphs = text.split('\n')
+    
+    for para in paragraphs:
+        if para.strip():  # Skip empty lines
+            doc.add_paragraph(para)
+    
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+def create_txt_from_text(text, filename):
+    """Create a TXT from text content"""
+    buffer = io.BytesIO()
+    buffer.write(text.encode('utf-8'))
+    buffer.seek(0)
+    return buffer
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -103,49 +154,141 @@ def ask():
     answer = aiprocess(file_paths, question)
     return jsonify({"answer": answer})
 
-@app.route('/edit-pdf', methods=['POST'])
-def edit():
-    file_id = request.form.get("file_id")
-    file = request.files.get("file")
+@app.route('/edit-file/<int:file_id>', methods=['POST'])
+def edit_file(file_id):
+    data = request.json
+    filename = data.get("filename")
+    contents = data.get("contents")
 
-    if not file_id:
-        return jsonify({"error": "Missing file_id"}), 400
-    if not file:
-        return jsonify({"error": "No file provided"}), 400
+    if not filename:
+        return jsonify({"error": "Missing filename"}), 400
+    if not contents:
+        return jsonify({"error": "Missing contents"}), 400
+
+    # Initialize variables for cleanup
+    conn = None
+    cursor = None
+    temp_path = None
 
     try:
-        file_id = int(file_id)
-    except ValueError:
-        return jsonify({"error": "Invalid file_id"}), 400
-
-    
-    modified_pdf = edit_pdf(file)
-
-    
-    try:
+        # Get file extension
+        ext = os.path.splitext(filename)[1].lower()
+        
+        # Create the modified file based on extension
+        if ext == '.pdf':
+            modified_file = create_pdf_from_text(contents, filename)
+            content_type = 'application/pdf'
+        elif ext == '.docx':
+            modified_file = create_docx_from_text(contents, filename)
+            content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        elif ext == '.txt':
+            modified_file = create_txt_from_text(contents, filename)
+            content_type = 'text/plain'
+        else:
+            return jsonify({"error": f"Unsupported file type: {ext}"}), 400
+        
+        # Update database with modified file
         conn = pymysql.connect(**db_config)
         cursor = conn.cursor()
-        modified_pdf.seek(0)
-        content = modified_pdf.read()
+        modified_file.seek(0)
+        content = modified_file.read()
         update_query = "UPDATE files SET filename = %s, content = %s WHERE id = %s"
-        new_filename = f"edited_{file.filename}"
+        new_filename = f"edited_{filename}"
         cursor.execute(update_query, (new_filename, content, file_id))
         conn.commit()
 
         if cursor.rowcount == 0:
             return jsonify({"error": "No file found with given file_id"}), 404
 
+        # Return success response with file info
+        return jsonify({
+            "message": "File edited successfully",
+            "file_id": file_id,
+            "original_filename": filename,
+            "new_filename": new_filename,
+            "file_type": ext,
+            "content_type": content_type
+        })
+
     except Exception as e:
-        return jsonify({"error": "Failed to update DB", "db_error": str(e)}), 500
+        return jsonify({"error": "Failed to edit file", "details": str(e)}), 500
     finally:
+        # Clean up resources
         if cursor:
             cursor.close()
         if conn:
             conn.close()
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
-    modified_pdf.seek(0)
-    return send_file(modified_pdf, download_name="modified.pdf", as_attachment=True)
+@app.route('/edit-file-download/<int:file_id>', methods=['POST'])
+def edit_file_download(file_id):
+    data = request.json
+    filename = data.get("filename")
+    contents = data.get("contents")
 
+    if not filename:
+        return jsonify({"error": "Missing filename"}), 400
+    if not contents:
+        return jsonify({"error": "Missing contents"}), 400
+
+    # Initialize variables for cleanup
+    conn = None
+    cursor = None
+    temp_path = None
+
+    try:
+        # Get file extension
+        ext = os.path.splitext(filename)[1].lower()
+        
+        # Create the modified file based on extension
+        if ext == '.pdf':
+            modified_file = create_pdf_from_text(contents, filename)
+            mimetype = 'application/pdf'
+            download_name = f"edited_{filename}"
+        elif ext == '.docx':
+            modified_file = create_docx_from_text(contents, filename)
+            mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            download_name = f"edited_{filename}"
+        elif ext == '.txt':
+            modified_file = create_txt_from_text(contents, filename)
+            mimetype = 'text/plain'
+            download_name = f"edited_{filename}"
+        else:
+            return jsonify({"error": f"Unsupported file type: {ext}"}), 400
+        
+        # Update database with modified file
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+        modified_file.seek(0)
+        content = modified_file.read()
+        update_query = "UPDATE files SET filename = %s, content = %s WHERE id = %s"
+        new_filename = f"edited_{filename}"
+        cursor.execute(update_query, (new_filename, content, file_id))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify({"error": "No file found with given file_id"}), 404
+
+        # Return the modified file for download
+        modified_file.seek(0)
+        return send_file(
+            modified_file, 
+            download_name=download_name, 
+            as_attachment=True,
+            mimetype=mimetype
+        )
+
+    except Exception as e:
+        return jsonify({"error": "Failed to edit file", "details": str(e)}), 500
+    finally:
+        # Clean up resources
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 @app.route('/get-file-content/<int:file_id>', methods=['GET'])
 def get_file_content(file_id):
@@ -165,11 +308,11 @@ def get_file_content(file_id):
         ext = os.path.splitext(filename)[1].lower()
         temp_path = f"temp_{file_id}{ext}"
 
-        
+        # Write content to temporary file
         with open(temp_path, "wb") as f:
             f.write(content)
 
-        
+        # Extract text based on file type
         if ext == ".pdf":
             doc = fitz.open(temp_path)
             text = "".join(page.get_text() for page in doc)
@@ -203,6 +346,7 @@ def get_file_content(file_id):
             cursor.close()
         if conn:
             conn.close()
+
 @app.route('/websearch', methods=['POST'])
 def web_search():
     data = request.json
