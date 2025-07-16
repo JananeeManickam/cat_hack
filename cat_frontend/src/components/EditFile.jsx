@@ -25,12 +25,15 @@ export default function EditFilePage() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('http://localhost:5000/edit-file-content', {
+      const response = await fetch(`http://localhost:5000/edit-file/${fileId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ file_id: fileId, content }),
+        body: JSON.stringify({
+          filename: fileData.filename,
+          contents: content
+        }),
       });
 
       if (!response.ok) {

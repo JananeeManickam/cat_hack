@@ -54,6 +54,7 @@ h2 {
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.2s ease;
+  margin-right: 10px;
 }
 
 .edit-button:hover {
