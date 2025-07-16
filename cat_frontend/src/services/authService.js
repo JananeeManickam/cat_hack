@@ -1,5 +1,5 @@
-const LOGIN_URL = 'http://localhost:5000/login/';
-const SIGNUP_URL = 'http://localhost:5000/signup/';
+const LOGIN_URL = 'http://localhost:5000/login';
+const SIGNUP_URL = 'http://localhost:5000/signup';
 
 export async function registerUser(data) {
   const res = await fetch(SIGNUP_URL, {

@@ -5,7 +5,7 @@ import pymysql
 import io
 import os
 from docx import Document
-import fitz  
+import fitz  # PyMuPDF
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
@@ -17,22 +17,27 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from flask_cors import CORS
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.units import inch
+import textwrap
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-CORS(app)
+CORS(app) 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 db_config = {
-    "host": "127.0.0.1",
+    "host": "localhost",
     "user": "root",
-    "password": "Janu&mysql1603",
-    "database": "caterpillar"
+    "password": "aldina123",
+    "database": "cat"
 }
 
 GOOGLE_API_KEY = "AIzaSyBDidg9orPvjjQfMz6n1tNx8RWgLjEipeQ"
 SERP_API_KEY = "dad8d20aacff98df37793a921fe61fad4ddadfc0d2714150c739529c8b0e3c2c"
-
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -103,6 +108,51 @@ def login():
             cursor.close()
         if conn:
             conn.close()
+
+def create_pdf_from_text(text, filename):
+    """Create a PDF from text content"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Split text into paragraphs
+    paragraphs = text.split('\n')
+    
+    for para in paragraphs:
+        if para.strip():  # Skip empty lines
+            # Wrap long lines
+            wrapped_lines = textwrap.fill(para, width=80)
+            p = Paragraph(wrapped_lines, styles['Normal'])
+            story.append(p)
+            story.append(Spacer(1, 12))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+def create_docx_from_text(text, filename):
+    """Create a DOCX from text content"""
+    buffer = io.BytesIO()
+    doc = Document()
+    
+    # Split text into paragraphs
+    paragraphs = text.split('\n')
+    
+    for para in paragraphs:
+        if para.strip():  # Skip empty lines
+            doc.add_paragraph(para)
+    
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+def create_txt_from_text(text, filename):
+    """Create a TXT from text content"""
+    buffer = io.BytesIO()
+    buffer.write(text.encode('utf-8'))
+    buffer.seek(0)
+    return buffer
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -430,7 +480,6 @@ def get_all_files():
         }), 200
 
     except Exception as e:
-        print("Error in /files:", e)
         return jsonify({"error": str(e)}), 500
 
     finally:
