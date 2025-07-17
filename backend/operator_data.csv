@@ -1,0 +1,4 @@
+operator_id,name,experience_years,certification_level,fatigue_score,shift_start,hours_worked
+OP001,John Smith,8,Advanced,2,06:00,4.5
+OP002,Maria Garcia,12,Expert,1,14:00,2.0
+OP003,Robert Johnson,5,Intermediate,3,22:00,6.5
