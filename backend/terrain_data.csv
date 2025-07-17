@@ -1,0 +1,4 @@
+location_id,terrain_type,slope_angle,soil_hardness,weather_condition,visibility,ground_stability
+LOC001,rocky,15,8,sunny,10,7
+LOC002,sandy,5,3,rainy,3,4
+LOC003,clay,25,6,cloudy,8,9

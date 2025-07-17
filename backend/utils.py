@@ -11,8 +11,10 @@ from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import PromptTemplate
 from langchain_community.vectorstores import Chroma
-from serpapi import GoogleSearch
+# from serpapi import GoogleSearch
 import google.generativeai as genai
+import urllib.parse
+import pandas as pd
 
 # ---------- PDF Editing ----------
 def edit_pdf(file_storage, text_to_add="Modified"):
@@ -73,8 +75,35 @@ def extract_text_from_txt(txt_path):
         return f.read()
 
 # ---------- AI Processing with Gemini ----------
+import pandas as pd
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import RetrievalQA
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_core.prompts import PromptTemplate
+
+def extract_text_from_pdf(path):
+    from PyPDF2 import PdfReader
+    reader = PdfReader(path)
+    return "\n".join([page.extract_text() or "" for page in reader.pages])
+
+def extract_text_from_docx(path):
+    from docx import Document
+    doc = Document(path)
+    return "\n".join([para.text for para in doc.paragraphs])
+
+def extract_text_from_txt(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def extract_text_from_csv(path):
+    print(path,"path")
+    df = pd.read_csv(path)
+    return f"CSV FILE: {path}\n" + df.to_string(index=False)
+
 def aiprocess(file_paths, question):
     texts = []
+    
     for path in file_paths:
         if path.endswith(".pdf"):
             texts.append(extract_text_from_pdf(path))
@@ -82,10 +111,13 @@ def aiprocess(file_paths, question):
             texts.append(extract_text_from_docx(path))
         elif path.endswith(".txt"):
             texts.append(extract_text_from_txt(path))
+        elif path.endswith(".csv"):
+            texts.append(extract_text_from_csv(path))
         else:
-            continue  # skip unsupported
+            continue  # Unsupported
 
     context = "\n\n".join(texts)
+
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
     chunks = text_splitter.split_text(context)
 
@@ -103,14 +135,23 @@ def aiprocess(file_paths, question):
 
     vector_index = Chroma.from_texts(chunks, embeddings).as_retriever(search_kwargs={"k": 5})
 
-    prompt_template = """YOU are an assistant.
-Give a detailed explanation for the question using the context. If unknown, say you don’t know.
-Always end with: "Thanks for asking!"
+    prompt_template = """You are a highly experienced machine operator with 25 years of expertise.
+You have access to terrain data, climate readings, expected machine behavior, and current sensor readings.
+Analyze the data provided and determine:
+
+1. Whether any machine is likely to fail or already failing.
+2. What are the probable causes?
+3. What are the step-by-step recommendations or actions the operator should take to prevent or respond to failure?
+4. Make your suggestions practical and safety-first.
+
+only give the final improvements , what isthe cause of failure if any do not give the questions in the response
 
 Context:
 {context}
+
 Question: {question}
-Helpful Answer:"""
+
+Helpful Answer (like an expert operator):"""
 
     QA_CHAIN_PROMPT = PromptTemplate.from_template(prompt_template)
 
@@ -122,25 +163,44 @@ Helpful Answer:"""
     )
 
     result = qa_chain({"query": question})
-    return {
-        "answer": result["result"],
-        "sources": [doc.metadata for doc in result["source_documents"]]
-    }
+    return  result["result"] 
+    
 
 # ---------- Google Search ----------
+# def search_google(query):
+#     genai.configure(api_key="AIzaSyBj7ruubVa72IK-7RcGFJjHuyerBlveDqI")
+
+#     params = {
+#         "q": query,
+#         "api_key": "dad8d20aacff98df37793a921fe61fad4ddadfc0d2714150c739529c8b0e3c2c",
+#         "num": 15
+#     }
+
+#     search = GoogleSearch(params)
+#     results = search.get_dict()
+#     return [result['link'] for result in results.get("organic_results", [])]
 def search_google(query):
-    genai.configure(api_key="AIzaSyBj7ruubVa72IK-7RcGFJjHuyerBlveDqI")
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        encoded_query = urllib.parse.quote_plus(query)
+        url = f"https://www.google.com/search?q={encoded_query}"
 
-    params = {
-        "q": query,
-        "api_key": "dad8d20aacff98df37793a921fe61fad4ddadfc0d2714150c739529c8b0e3c2c",
-        "num": 15
-    }
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    search = GoogleSearch(params)
-    results = search.get_dict()
-    return [result['link'] for result in results.get("organic_results", [])]
+        links = []
+        for a in soup.select('a'):
+            href = a.get('href')
+            if href and "/url?q=" in href:
+                link = href.split("/url?q=")[1].split("&")[0]
+                if "google.com" not in link:  # skip internal links
+                    links.append(link)
 
+        return links[:10]  # return top 10 results
+
+    except Exception as e:
+        print(f"Error searching Google: {e}")
+        return []
 # ---------- Web Text Extraction ----------
 def extract_text_from_url(url):
     try:

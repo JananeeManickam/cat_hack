@@ -1,0 +1,4 @@
+machine_id,fuel_level,engine_hours,hydraulic_pressure,temperature,last_maintenance,operator_id,location_lat,location_lon,load_capacity,status
+EX001,45,1523.5,2800,85,2024-01-15,OP001,40.7128,-74.006,85,active
+EX002,78,2847.2,3200,92,2024-02-20,OP002,34.0522,-118.2437,60,maintenance
+EX003,23,892.1,2100,78,2024-03-10,OP003,41.8781,-87.6298,95,active

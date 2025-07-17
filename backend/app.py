@@ -9,7 +9,6 @@ import fitz  # PyMuPDF
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
-from serpapi import GoogleSearch
 import google.generativeai as genai
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain import PromptTemplate
@@ -418,49 +417,6 @@ def get_file_content(file_id):
         if conn:
             conn.close()
 
-@app.route('/websearch', methods=['POST'])
-def web_search():
-    data = request.json
-    query = data.get("query")
-
-    if not query:
-        return jsonify({"error": "Query is required"}), 400
-
-    try:
-        # Step 1: Get search result links using utils function
-        links = search_google(query)
-
-        # Step 2: Scrape content from each link
-        snippets = []
-        headers = {"User-Agent": "Mozilla/5.0"}
-
-        for url in links[:5]:  # Limit to top 5 for performance
-            try:
-                response = requests.get(url, headers=headers, timeout=10)
-                soup = BeautifulSoup(response.text, "html.parser")
-
-                # Extract visible paragraph texts
-                text = " ".join(p.text.strip() for p in soup.find_all("p") if p.text.strip())
-                snippet = text[:1000] + "..." if len(text) > 1000 else text
-
-                snippets.append({
-                    "url": url,
-                    "snippet": snippet
-                })
-            except Exception as e:
-                snippets.append({
-                    "url": url,
-                    "snippet": f"Failed to fetch content: {str(e)}"
-                })
-
-        return jsonify({
-            "query": query,
-            "results": snippets
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/files', methods=['GET'])
 def get_all_files():
     conn = None
@@ -487,6 +443,113 @@ def get_all_files():
             cursor.close()
         if conn:
             conn.close()
+from flask import request, jsonify, send_file
+from gtts import gTTS
+from pydub import AudioSegment
+import google.generativeai as genai
+import os
+
+@app.route('/text-to-speech', methods=['POST'])
+def text_to_speech():
+    try:
+        data = request.get_json()
+        input_text = data.get("text", "")
+
+        if not input_text.strip():
+            return jsonify({"error": "Text is required"}), 400
+
+        # Step 1: Gemini - Generate response
+        reply_text=aiprocess(["machine_data.csv","operator_data.csv","terrain_data.csv"],input_text)
+        print(reply_text)
+
+        # Step 2: gTTS - Convert text to speech (MP3 first)
+        tts = gTTS(text=reply_text, lang='en')
+        mp3_path = os.path.join("uploads", "response.mp3")
+        wav_path = os.path.join("uploads", "response.wav")
+
+        tts.save(mp3_path)
+
+        # Step 3: Convert MP3 to WAV
+        sound = AudioSegment.from_mp3(mp3_path)
+        sound.export(wav_path, format="wav")
+
+        return send_file(wav_path, mimetype="audio/wav", as_attachment=True, download_name="response.wav")
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+from flask import Flask, request, jsonify, url_for
+import os
+import uuid
+from gtts import gTTS
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Directory to save audio files
+AUDIO_DIR = 'static/audio'
+os.makedirs(AUDIO_DIR, exist_ok=True)
+
+def english_tts(text):
+    """
+    Convert text to English speech and save as MP3.
+    
+    Args:
+        text (str): Input text
+
+    Returns:
+        tuple: (success: bool, message: str, filename: str)
+    """
+    try:
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"speech_{unique_id}.mp3"
+        print("hhheee\n\n\n")
+        filepath = os.path.join(AUDIO_DIR, filename)
+        
+        tts = gTTS(text=text, lang='en')
+        tts.save(filepath)
+        print("uhuiuu")
+        return True, "Speech generated successfully.", filename
+    except Exception as e:
+        return False, f"Error generating speech: {str(e)}", None
+
+@app.route('/generate', methods=['POST'])
+def generate_speech():
+    """Endpoint to convert text to speech."""
+    try:
+        data = request.get_json()
+        input_text = data.get("text", "")
+
+        if not input_text.strip():
+            return jsonify({"error": "Text is required"}), 400
+
+        # Step 1: Gemini - Generate response
+        text=aiprocess(["machine_data.csv","operator_data.csv","terrain_data.csv"],input_text)
+        
+        print(text,"\n\n\n\n\n\n")
+        if isinstance(text, dict):
+            text = text.get("answer") or text.get("text") or str(text)
+        print(text,type(text),"text\n\n")
+        if not text:
+            return jsonify({'success': False, 'message': 'Text is required'}), 400
+
+        success, message, filename = english_tts(text)
+        print(success,message)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'filename': filename,
+                'audio_url': url_for('static', filename=f'audio/{filename}', _external=True)
+            })
+        else:
+            return jsonify({'success': False, 'message': message}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
+    

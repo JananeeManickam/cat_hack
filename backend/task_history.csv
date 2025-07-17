@@ -1,0 +1,6 @@
+task_id,machine_id,terrain_type,fuel_consumed,time_taken,task_type,completion_status
+T001,EX001,rocky,45,120,excavation,completed
+T002,EX001,sandy,30,90,loading,completed
+T003,EX002,clay,65,180,digging,completed
+T004,EX003,rocky,55,150,excavation,completed
+T005,EX001,sandy,35,95,loading,completed
