@@ -5,7 +5,8 @@ import Logout from './pages/Logout'
 import MyFiles from './pages/MyFiles'
 import EditFile from './components/EditFile'
 import ChatbotPage from './components/ChatbotLayout'
-
+import TaskDetail from './pages/TaskDetail'  // Add this import
+import CatMachineTerrainSystem from './pages/CatMachineTerrainSystem'
 
 function App() {
   return (
@@ -17,6 +18,8 @@ function App() {
         <Route path="/my_files" element={<MyFiles />} />
         <Route path="/edit/:fileId" element={<EditFile />} />
         <Route path="/chatbot" element={<ChatbotPage />} />
+        <Route path="/task-detail" element={<TaskDetail />} />  
+        <Route path="/catmachineterrainsystem" element={<CatMachineTerrainSystem/>} />
       </Routes>
     </Router>
   )
