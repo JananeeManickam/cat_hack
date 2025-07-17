@@ -7,6 +7,7 @@ import EditFile from './components/EditFile'
 import ChatbotPage from './components/ChatbotLayout'
 import TaskDetail from './pages/TaskDetail'  // Add this import
 import CatMachineTerrainSystem from './pages/CatMachineTerrainSystem'
+import PDFToVoiceConverter from './pages/TextToVoice'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/chatbot" element={<ChatbotPage />} />
         <Route path="/task-detail" element={<TaskDetail />} />  
         <Route path="/catmachineterrainsystem" element={<CatMachineTerrainSystem/>} />
+        <Route path='/voice'element={<PDFToVoiceConverter />} />
       </Routes>
     </Router>
   )
