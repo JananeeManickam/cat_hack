@@ -28,8 +28,8 @@ export default function Sidebar() {
 
       <ul className="nav-links">
         <li onClick={() => navigate('/dashboard')}><FaUpload /> {!collapsed && 'Tasks'}</li>
-        <li onClick={() => navigate('/my_files')}><FaFolderOpen /> {!collapsed && 'My Files'}</li>
-        <li onClick={() => navigate('/chatbot')}><FaComments /> {!collapsed && 'Chatbot'}</li>
+        {/* <li onClick={() => navigate('/my_files')}><FaFolderOpen /> {!collapsed && 'My Files'}</li> */}
+        {/* <li onClick={() => navigate('/chatbot')}><FaComments /> {!collapsed && 'Chatbot'}</li> */}
       </ul>
 
       <ul className="logout-link">
